@@ -17,11 +17,59 @@ db.init_app(app)
 api = Api(app)
 
 class Plants(Resource):
-    pass
+    def get(self):
+        # Retrieve all plant records, convert them to dictionaries, and return a response
+        response_dict_list = [p.to_dict() for p in Plant.query.all()]
+
+        response = make_response(
+            response_dict_list,
+            200,
+        )
+        return response
+    def post(self):
+        data = request.get_json()  # Ensure this is retrieving the JSON correctly
+
+        # Ensure that all fields are being passed
+        if not all(key in data for key in ('name', 'image', 'price')):
+            return make_response({'error': 'Missing fields'}, 400)
+
+        new_plant = Plant(
+            name=data['name'],
+            image=data['image'],
+            price=data['price'],
+        )
+
+        db.session.add(new_plant)
+        db.session.commit()
+
+        response_dict = new_plant.to_dict()
+        response = make_response(response_dict, 201)
+
+        return response
+api.add_resource(Plants, '/plants')
 
 class PlantByID(Resource):
-    pass
-        
+    def get(self, id):
+        # Retrieve a single plant by ID, convert it to a dictionary, and return a response
+        plant = Plant.query.filter_by(id=id).first()
+
+        if plant:
+            response_dict = plant.to_dict()
+
+            response = make_response(
+                response_dict,
+                200,
+            )
+        else:
+            # If no plant is found with the given ID, return a 404 error
+            response = make_response(
+                {'error': 'Plant not found'},
+                404,
+            )
+
+        return response
+
+api.add_resource(PlantByID, '/plants/<int:id>')
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
